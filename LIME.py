@@ -10,7 +10,7 @@ from scipy.stats import spearmanr
 from tensorflow import keras
 
 #carga de datos
-adults = pd.read_csv('adult.data', header=None,
+adults = pd.read_csv('proyecto_caja_negra/adult.data', header=None,
                        names=['age', 'workclass', 'fnlwgt', 'education',
                               'education-num', 'marital-status', 'occupation', 'relationship',
                                 'race', 'sex', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'money'])
@@ -25,25 +25,25 @@ codified_attributes = codificator_attributes.transform(attributes_adults)
 codificator_goal = sk.preprocessing.LabelEncoder()
 codified_goal = codificator_goal.fit_transform(goal_adult)
 
-max_attributes_adults = [max(attributes_adults[x][:]) for x in range(len(attributes_adults))]
-min_attributes_adults = [min(attributes_adults[x][:]) for x in range(len(attributes_adults))]
+max_attributes_adults = [max(codified_attributes[x][:]) for x in range(14)]
+min_attributes_adults = [min(codified_attributes[x][:]) for x in range(14)]
 
 (training_attributes, test_attributes,
  training_goal, test_goal) = model_selection.train_test_split(
      codified_attributes,codified_goal, random_state=12345, test_size=.33, stratify=codified_goal)
 
 
-poker_hands = pd.read_csv('poker-hand-testing.data', header=None,
+poker_hands = pd.read_csv('proyecto_caja_negra/poker-hand-testing.data', header=None,
                           names=['S1', 'C1', 'S2', 'C2', 'S3', 'C3', 'S4', 'C4', 'S5', 'C5', 'class'])
 
 attributes_poker = poker_hands.loc[:, 'S1':'C5']
 goal_poker = poker_hands['class']
 
 (training_attributes_poker, test_attributes_poker,
- training_goal_poker, test_goal_poker) = model_selection.train_test_split(attributes_poker, goal_poker, random_state=12345, test_size=.33, stratify=codified_goal)
+ training_goal_poker, test_goal_poker) = model_selection.train_test_split(attributes_poker, goal_poker, random_state=12345, test_size=.33, stratify=goal_poker)
 
 #Entrenamiento de modelo random forest model
-randomForestModel = RandomForestClassifier(n_estimator=100, max_depth=10, random_state=42)
+randomForestModel = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
 randomForestModel.fit(training_attributes, training_goal)
 
 #Entrenamiento de modelo xgboost
@@ -54,7 +54,8 @@ params = {
     'max_depth': 3,
     'eta': 0.1,
     'objective': 'multi:softmax',
-    'eval_metric': 'logloss'
+    'eval_metric': 'logloss',
+    'num_class': '2'
 }
 
 xgboostModel = xgb.train(params, training_data)
@@ -68,21 +69,21 @@ codificator_goal_poker = sk.preprocessing.OneHotEncoder(sparse=False, drop='firs
 codified_goal_poker = codificator_goal.fit_transform(goal_neural_network)
 
 (training_attributes_neural, test_attributes_nueral,
- training_goal_neural, test_goal_neural) = model_selection.train_test_split(attributes_neural_network, codified_goal_poker, random_state=12345, test_size=.33, stratify=codified_goal)
+ training_goal_neural, test_goal_neural) = model_selection.train_test_split(attributes_neural_network, codified_goal_poker, random_state=12345, test_size=.33, stratify=codified_goal_poker)
 
 normalizador = keras.layers.Normalization()
 normalizador.adapt(training_attributes_neural)
 
 poker_hand = keras.Sequential()
-poker_hand.add(keras.Input(shape=(11,)))
+poker_hand.add(keras.Input(shape=(10,)))
 poker_hand.add(normalizador)
 poker_hand.add(keras.layers.Dense(10))
 poker_hand.add(keras.layers.Dense(10))
 poker_hand.add(keras.layers.Dense(10, activation='softmax'))
-poker_hand.compile(optimizer='SGD', loss='CategoricalCrossentropy')
+poker_hand.compile(optimizer='SGD', loss='sparse_categorical_crossentropy')
 
 poker_hand.fit(training_attributes_neural, training_goal_neural,
-                batch_size=256, epochs=30)
+                batch_size=256, epochs=20)
 
 
 def cosine_distance(muestra1, muestra2):
@@ -108,12 +109,11 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
 
     #Realizamos N iteraciones para generar N permutaciones de los atributos de la muestra
     for i in range (1, N):
-    
+
     #Generamos una lista aleatoria que tenga como maximo el tamaño de la muestra y cuyos enteros esten entre 0 y el tamaño de la muestra
-        attributes = np.random.choice(np.random.randint(len(data)),np.random.randint(len(data)))
+        attributes = np.random.choice(len(data),np.random.randint(len(data)), replace=False)
     #Generamos las sublistas que representaran los diferentes valores para 1 permutación de la muestra
         element_R = []
-        element_W = []
         element_X = []
     #Recorremos los atributos de la muestra
         for j in range(len(data)):
@@ -130,11 +130,10 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
                 element_X.append(data[j])
             
 
-            element_W.append(cosine_distance(element_X, data))
+        W.append(cosine_distance(element_X, data))
 
-            X.append(element_X)
-            R.append(element_R)
-            W.append(element_W)
+        X.append(element_X)
+        R.append(element_R)
     #Una vez realizadas las permutaciones las ponderamos con los pesos generados en W
     R_ponderada = []
 
@@ -154,7 +153,7 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
     #Realizamos las predicciones de las permutaciones con el modelo pasado como parametro
     for i in range(len(X)):
 
-        prediction = f.predict(X[i].to_numpy())
+        prediction = f.predict(np.array(X[i]).reshape(1, -1))
         Y.append(prediction)
 
     #Se entrena el modelo ridge pasandole las R ponderadas como atributos y las predicciones de Y como objetivo
@@ -256,3 +255,4 @@ def congruencia(coherencia):
     return result
     
     
+LIMEAlgorithm(codified_attributes[:][5], randomForestModel, 8, max_attributes_adults, min_attributes_adults)
