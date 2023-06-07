@@ -108,7 +108,7 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
     Y = []
 
     #Realizamos N iteraciones para generar N permutaciones de los atributos de la muestra
-    for i in range (1, N):
+    for i in range (N):
 
     #Generamos una lista aleatoria que tenga como maximo el tamaño de la muestra y cuyos enteros esten entre 0 y el tamaño de la muestra
         attributes = np.random.choice(len(data),np.random.randint(len(data)), replace=False)
@@ -255,4 +255,4 @@ def congruencia(coherencia):
     return result
     
     
-LIMEAlgorithm(codified_attributes[:][5], randomForestModel, 8, max_attributes_adults, min_attributes_adults)
+d = LIMEAlgorithm(codified_attributes[:][5], randomForestModel, 8, max_attributes_adults, min_attributes_adults)
