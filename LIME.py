@@ -6,8 +6,10 @@ import xgboost as xgb
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestClassifier
 from sklearn import model_selection
+from sklearn import svm
 from scipy.stats import spearmanr
 from tensorflow import keras
+from keras.utils import to_categorical
 
 #carga de datos
 adults = pd.read_csv('proyecto_caja_negra/adult.data', header=None,
@@ -42,33 +44,30 @@ goal_poker = poker_hands['class']
 (training_attributes_poker, test_attributes_poker,
  training_goal_poker, test_goal_poker) = model_selection.train_test_split(attributes_poker, goal_poker, random_state=12345, test_size=.33, stratify=goal_poker)
 
-#Entrenamiento de modelo random forest model
+#Entrenamiento de modelo random forest model para datos adult
 randomForestModel = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
 randomForestModel.fit(training_attributes, training_goal)
 
-#Entrenamiento de modelo xgboost
+#Entrenamiento de modelo xgboost para datos adult
 
 training_data = xgb.DMatrix(training_attributes, label= training_goal)
 
 params = {
-    'max_depth': 3,
-    'eta': 0.1,
-    'objective': 'multi:softmax',
+    'objective': 'binary:logistic',
     'eval_metric': 'logloss',
-    'num_class': '2'
 }
 
 xgboostModel = xgb.train(params, training_data)
 
-#Entrenamiento de modelo redes neuronales
+#Entrenamiento de modelo redes neuronales para datos poker_hands
 
 attributes_neural_network = attributes_poker.to_numpy()
 goal_neural_network = goal_poker.to_numpy()
 
-codificator_goal_poker = sk.preprocessing.OneHotEncoder(sparse=False, drop='first')
-codified_goal_poker = codificator_goal.fit_transform(goal_neural_network)
+classes = 10
+codified_goal_poker = to_categorical(goal_neural_network, classes)
 
-(training_attributes_neural, test_attributes_nueral,
+(training_attributes_neural, test_attributes_neural,
  training_goal_neural, test_goal_neural) = model_selection.train_test_split(attributes_neural_network, codified_goal_poker, random_state=12345, test_size=.33, stratify=codified_goal_poker)
 
 normalizador = keras.layers.Normalization()
@@ -77,13 +76,28 @@ normalizador.adapt(training_attributes_neural)
 poker_hand = keras.Sequential()
 poker_hand.add(keras.Input(shape=(10,)))
 poker_hand.add(normalizador)
-poker_hand.add(keras.layers.Dense(10))
-poker_hand.add(keras.layers.Dense(10))
+poker_hand.add(keras.layers.Dense(12))
+poker_hand.add(keras.layers.Dense(12))
 poker_hand.add(keras.layers.Dense(10, activation='softmax'))
-poker_hand.compile(optimizer='SGD', loss='sparse_categorical_crossentropy')
+poker_hand.compile(optimizer='SGD', loss='categorical_crossentropy')
 
 poker_hand.fit(training_attributes_neural, training_goal_neural,
-                batch_size=256, epochs=20)
+                batch_size=256, epochs=5)
+
+#Entrenamiento de modelo xgboost para datos poker_hands
+
+training_data_poker = xgb.DMatrix(training_attributes_poker, label= training_goal_poker)
+
+params = {
+    'max_depth': 3,
+    'eta': 0.1,
+    'objective': 'multi:softmax',
+    'eval_metric': 'logloss',
+    'num_class': '10'
+}
+
+xgboostModel = xgb.train(params, training_data)
+
 
 
 def cosine_distance(muestra1, muestra2):
