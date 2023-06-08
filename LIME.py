@@ -52,6 +52,7 @@ randomForestModel.fit(training_attributes, training_goal)
 
 training_data = xgb.DMatrix(training_attributes, label= training_goal)
 
+#Se definen los parametros para una tarea de clasificación binaria
 params = {
     'objective': 'binary:logistic',
     'eval_metric': 'logloss',
@@ -88,6 +89,7 @@ poker_hand.fit(training_attributes_neural, training_goal_neural,
 
 training_data_poker = xgb.DMatrix(training_attributes_poker, label= training_goal_poker)
 
+#Se definen los parametros para una tarea de clasificación multiclase
 params = {
     'max_depth': 3,
     'eta': 0.1,
@@ -99,7 +101,7 @@ params = {
 xgboostModel = xgb.train(params, training_data)
 
 
-
+#función para calcular la distancia coseno de dos muestras
 def cosine_distance(muestra1, muestra2):
 
     vector1 = np.array(muestra1)
@@ -178,13 +180,25 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
 
 #Metricas
 
-def identidad(muestra_1, muestra_2):
+def identidad(muestra_1, muestra_2, explicación_1, explicación_2):
 
-    cosine_distance(muestra_1, muestra_2)
-    if cosine_distance == 0:
-        print('estas muestras son identicas')
+    distancia_muestras = cosine_distance(muestra_1, muestra_2)
+
+    if distancia_muestras == 0:
+
+        distancia_explicación = cosine_distance(explicación_1, explicación_2)
+
+        if distancia_explicación == 0:
+
+            print('estas muestras cumplen la metrica de identidad')
+
+        else:
+
+            print('estas muestras no cumplen con la metrica de identidad')
+
     
     else:
+        
         print('estas muestras no son identicas')
         
         
