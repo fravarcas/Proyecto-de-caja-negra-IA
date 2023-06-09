@@ -10,6 +10,7 @@ from sklearn import svm
 from scipy.stats import spearmanr
 from tensorflow import keras
 from keras.utils import to_categorical
+from sklearn.metrics.pairwise import cosine_distances
 
 #carga de datos
 adults = pd.read_csv('proyecto_caja_negra/adult.data', header=None,
@@ -40,6 +41,7 @@ poker_hands = pd.read_csv('proyecto_caja_negra/poker-hand-testing.data', header=
 
 attributes_poker = poker_hands.loc[:, 'S1':'C5']
 goal_poker = poker_hands['class']
+
 
 (training_attributes_poker, test_attributes_poker,
  training_goal_poker, test_goal_poker) = model_selection.train_test_split(attributes_poker, goal_poker, random_state=12345, test_size=.33, stratify=goal_poker)
@@ -167,28 +169,38 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
         R_ponderada.append(R_muestra_ponderada)
 
     #Realizamos las predicciones de las permutaciones con el modelo pasado como parametro
-    for i in range(len(X)):
+    if f == randomForestModel:
+        for i in range(len(X)):
 
-        prediction = f.predict(np.array(X[i]).reshape(1, -1))
-        Y.append(prediction)
+            prediction = f.predict(np.array(X[i]).reshape(1, -1))
+            Y.append(prediction)
 
+    elif f == xgboostModel:
+        for i in range(len(X)):
+            test = np.array(X[i]).reshape(1, -1)
+            test_xgb = xgb.DMatrix(test)
+            prediction = f.predict(test_xgb)
+            Y.append(prediction)
     #Se entrena el modelo ridge pasandole las R ponderadas como atributos y las predicciones de Y como objetivo
-    G = Ridge(alpha=1.0)
+    G = Ridge()
     G.fit(R_ponderada, Y)
 
-    return G.get_params()
+    return G.coef_
 
 #Metricas
 
-def identidad(muestra_1, muestra_2, explicación_1, explicación_2):
+def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
+
+    d_1 = LIMEAlgorithm(muestra_1, f, 1000, max_attribute, min_attribute)
+    d_2 = LIMEAlgorithm(muestra_2, f, 1000, max_attribute, min_attribute)
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
-    if distancia_muestras == 0:
+    if distancia_muestras == 0.9999999999999999:
 
-        distancia_explicación = cosine_distance(explicación_1, explicación_2)
+        distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
 
-        if distancia_explicación == 0:
+        if distancia_explicación == 0.9999999999999999:
 
             print('estas muestras cumplen la metrica de identidad')
 
@@ -198,37 +210,43 @@ def identidad(muestra_1, muestra_2, explicación_1, explicación_2):
 
     
     else:
-        
+
         print('estas muestras no son identicas')
         
         
         
-def separabilidad(muestra_1, muestra_2,explicacion_a, explicacion_b, umbral_distancia=1e-6):
-    distacia_muestras_ab=cosine_distance(muestra_1, muestra_2)
-    if distancia_muestras_ab == 0:
-        return True
-    
-    distancia_explicaciones_ab=cosine_distance(explicacion_a, explicacion_b)
-    if distancia_explicaciones_ab<=umbral_distancia:
-        return False
-    return True
+def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-def estabilidad(explanations, perturbation):
-    num_objects = len(explanations)
-    distances_original = []
-    distances_perturbed = []
+    d_1 = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
+    d_2 = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
+
+
+    distacia_muestras_ab = cosine_distance(muestra_1, muestra_2)
+
+    if distacia_muestras_ab != 0.9999999999999999:
+        
+        distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
     
-    for i in range(num_objects):
-        distance_original = d(explanations[i], explanations[0]) 
-        distances_original.append(distance_original)
-        
-        distance_perturbed = d(perturbations[i], perturbations[0]) 
-        distances_perturbed.append(distance_perturbed)
-        
-        
-    correlation, _ = spearmanr(distances_original, distances_perturbed)
+        if distancia_explicación == 0.9999999999999999:
     
-    return correlation
+            print("estas muestras no cumplen con la metrica de separabilidad")
+
+        else:
+
+            print("estas muestras cumplen con la metrica de separabilidad")
+
+    else:
+
+        print("estas muestras son identicas por lo tanto no se puede comprobar separabilidad")
+
+def estabilidad(explicaciones_similares, explicaciones_diferentes):
+     
+    matriz_similares = np.array(explicaciones_similares)
+    matriz_diferentes = np.array(explicaciones_diferentes)     
+        
+    correlacion, _ = spearmanr(matriz_similares, matriz_diferentes, axis=1)
+    
+    return correlacion
        
 def selectividad(training_atribute, training_goal, test_atribute, test_goal):
 
@@ -282,5 +300,20 @@ def congruencia(coherencia):
     result = math.sqrt(suma/n)
     return result
     
-    
-d = LIMEAlgorithm(codified_attributes[:][5], randomForestModel, 8, max_attributes_adults, min_attributes_adults)
+#explicaciones_1 = []
+#explicacion_1 = LIMEAlgorithm(test_attributes[:][5], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
+#explicacion_2 = LIMEAlgorithm(test_attributes[:][6], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
+#explicaciones_1.append(explicacion_1)
+#explicaciones_1.append(explicacion_2)
+
+#explicaciones_2 = []
+#explicacion_3 = LIMEAlgorithm(test_attributes[:][10], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
+#explicacion_4 = LIMEAlgorithm(test_attributes[:][15], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
+#explicaciones_2.append(explicacion_3)
+#explicaciones_2.append(explicacion_4)
+#d = estabilidad(explicaciones_1, explicaciones_2)
+
+d = LIMEAlgorithm(test_attributes[:][19], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
+
+identidad(test_attributes[:][25], test_attributes[:][29], xgboostModel, max_attributes_adults, min_attributes_adults)
+
