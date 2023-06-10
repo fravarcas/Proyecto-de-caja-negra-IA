@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sc
 import pandas as pd
 import sklearn as sk
+from sklearn.metrics import precision_score, roc_auc_score
 import xgboost as xgb
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestClassifier
@@ -10,7 +11,6 @@ from sklearn import svm
 from scipy.stats import spearmanr
 from tensorflow import keras
 from keras.utils import to_categorical
-from sklearn.metrics.pairwise import cosine_distances
 
 #carga de datos
 adults = pd.read_csv('proyecto_caja_negra/adult.data', header=None,
@@ -28,8 +28,8 @@ codified_attributes = codificator_attributes.transform(attributes_adults)
 codificator_goal = sk.preprocessing.LabelEncoder()
 codified_goal = codificator_goal.fit_transform(goal_adult)
 
-max_attributes_adults = [max(codified_attributes[x][:]) for x in range(14)]
-min_attributes_adults = [min(codified_attributes[x][:]) for x in range(14)]
+max_attributes_adults = [max(codified_attributes[:][x]) for x in range(14)]
+min_attributes_adults = [min(codified_attributes[:][x]) for x in range(14)]
 
 (training_attributes, test_attributes,
  training_goal, test_goal) = model_selection.train_test_split(
@@ -242,35 +242,35 @@ def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 def estabilidad(explicaciones_similares, explicaciones_diferentes):
      
     matriz_similares = np.array(explicaciones_similares)
-    matriz_diferentes = np.array(explicaciones_diferentes)     
+    matriz_diferentes = np.array(explicaciones_diferentes)
         
     correlacion, _ = spearmanr(matriz_similares, matriz_diferentes, axis=1)
     
     return correlacion
        
-def selectividad(training_atribute, training_goal, test_atribute, test_goal):
+def selectividad(training_attribute, test_attribute, test_goal, f):
 
-    y_pred_orig = model.predict(test_atribute)
+    y_pred_orig = f.predict(test_attribute)
 
 
     auc_orig = roc_auc_score(test_goal, y_pred_orig)
 
 
-    num_features = training_atribute.shape[1]
+    num_features = training_attribute.shape[1]
 
 
     auc_values = []
 
 
     for i in range(num_features):
-        X_test_modified = test_atribute.copy()
-        X_test_modified[:, i] = 0 
+
+        attribute_test_modified = test_attribute.copy()
+        attribute_test_modified[:, i] = 0 
     
-     
-        y_pred_modified = model.predict(X_test_modified)
+        y_pred_modified = f.predict(attribute_test_modified)
     
     
-        auc_modified = roc_auc_score(training_goal, y_pred_modified)
+        auc_modified = roc_auc_score(test_goal, y_pred_modified)
     
   
         auc_change = auc_orig - auc_modified
@@ -284,7 +284,7 @@ def selectividad(training_atribute, training_goal, test_atribute, test_goal):
     return selectivity
 
         
-def coherencia(p,e):
+def coherencia(p, e):
     diferencia=abs(p-e)
     return diferencia
 
@@ -299,21 +299,54 @@ def congruencia(coherencia):
     suma=sum((a-promedio)**2 for a in coherencia)
     result = math.sqrt(suma/n)
     return result
+
+
+
+predicciones = [xgboostModel.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in test_attributes]
+
+errores_prediccion = []
+errores_prediccion_modificada = []
+predicciones_modificadas = []
+
+for i in range(len(predicciones)):
+
+    if predicciones[i] == test_goal[i]:
+
+        error_pred = 0
+
+    else:
+
+        error_pred = 1
     
-#explicaciones_1 = []
-#explicacion_1 = LIMEAlgorithm(test_attributes[:][5], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
-#explicacion_2 = LIMEAlgorithm(test_attributes[:][6], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
-#explicaciones_1.append(explicacion_1)
-#explicaciones_1.append(explicacion_2)
+    errores_prediccion.append(error_pred)
 
-#explicaciones_2 = []
-#explicacion_3 = LIMEAlgorithm(test_attributes[:][10], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
-#explicacion_4 = LIMEAlgorithm(test_attributes[:][15], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
-#explicaciones_2.append(explicacion_3)
-#explicaciones_2.append(explicacion_4)
-#d = estabilidad(explicaciones_1, explicaciones_2)
+num_features = training_attributes.shape[1]
 
-d = LIMEAlgorithm(test_attributes[:][19], xgboostModel, 100, max_attributes_adults, min_attributes_adults)
+for i in range(4):
 
-identidad(test_attributes[:][25], test_attributes[:][29], xgboostModel, max_attributes_adults, min_attributes_adults)
+    attribute_test_modified = test_attributes.copy()
+    attribute_test_modified[:, i] = 0 
 
+for i in range(10746):
+
+    y_pred_modified = xgboostModel.predict(xgb.DMatrix(np.array(attribute_test_modified[i][:]).reshape(1, -1)))
+
+    predicciones_modificadas.append(y_pred_modified)
+
+for i in range(len(predicciones_modificadas)):
+
+    if predicciones_modificadas[1] == test_goal[1]:
+
+        error_pred_mod = 0
+
+    else:
+
+        error_pred_mod = 1
+    
+    errores_prediccion_modificada.append(error_pred_mod)
+
+
+print(selectividad(training_attributes, test_attributes, test_goal, randomForestModel))
+for i in range(len(errores_prediccion)):
+
+    print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
