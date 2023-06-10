@@ -28,8 +28,8 @@ codified_attributes = codificator_attributes.transform(attributes_adults)
 codificator_goal = sk.preprocessing.LabelEncoder()
 codified_goal = codificator_goal.fit_transform(goal_adult)
 
-max_attributes_adults = [max(codified_attributes[:][x]) for x in range(14)]
-min_attributes_adults = [min(codified_attributes[:][x]) for x in range(14)]
+max_attributes_adults = [max(codified_attributes[:, x]) for x in range(14)]
+min_attributes_adults = [min(codified_attributes[:, x]) for x in range(14)]
 
 (training_attributes, test_attributes,
  training_goal, test_goal) = model_selection.train_test_split(
@@ -248,40 +248,24 @@ def estabilidad(explicaciones_similares, explicaciones_diferentes):
     
     return correlacion
        
-def selectividad(training_attribute, test_attribute, test_goal, f):
+def selectividad(test_attribute, test_goal, f, orden):
 
     y_pred_orig = f.predict(test_attribute)
-
-
     auc_orig = roc_auc_score(test_goal, y_pred_orig)
-
-
-    num_features = training_attribute.shape[1]
-
-
     auc_values = []
 
-
-    for i in range(num_features):
+    for i in orden:
 
         attribute_test_modified = test_attribute.copy()
         attribute_test_modified[:, i] = 0 
-    
         y_pred_modified = f.predict(attribute_test_modified)
-    
-    
         auc_modified = roc_auc_score(test_goal, y_pred_modified)
-    
-  
         auc_change = auc_orig - auc_modified
-    
-    
         auc_values.append(auc_change)
 
+    selectivity_scores = auc_values
 
-    selectivity = np.sum(auc_values)
-
-    return selectivity
+    return selectivity_scores
 
         
 def coherencia(p, e):
@@ -300,7 +284,63 @@ def congruencia(coherencia):
     result = math.sqrt(suma/n)
     return result
 
+#medida de selectividad
+attribute_training_modificado = training_attributes.copy()
 
+filas, columnas = attribute_training_modificado.shape
+
+
+for j in range(columnas):
+
+    d = {}
+
+    for i in range(filas):
+
+        if attribute_training_modificado[i, j] in d:
+
+            d[attribute_training_modificado[i, j]] = d[attribute_training_modificado[i, j]] + 1
+
+        else:
+
+            d[attribute_training_modificado[i, j]] = 1
+
+    valor_top_1 = sorted(list(d.values()), reverse=False)[:1]
+
+    print(valor_top_1)
+
+
+nuevo_orden = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
+
+print(selectividad(test_attributes, test_goal, randomForestModel, nuevo_orden))
+
+#medida de coherencia
+diccionario_variables_irrelevantes = {}
+
+attribute_test_modificado = test_attributes.copy()
+
+for i in range(filas):
+
+    for j in range(columnas):
+
+        if attribute_training_modificado[i, j] in diccionario_variables_irrelevantes:
+
+            diccionario_variables_irrelevantes[attribute_training_modificado[i, j]] = diccionario_variables_irrelevantes[attribute_training_modificado[i, j]] + 1
+
+        else:
+
+            diccionario_variables_irrelevantes[attribute_training_modificado[i, j]] = 1
+
+claves_valor_1 = [clave for clave, valor in diccionario_variables_irrelevantes.items() if valor == 1]
+
+filas, columnas = attribute_test_modificado.shape
+
+for i in range(filas):
+
+    for j in range(columnas):
+
+        if attribute_test_modificado[i, j] in claves_valor_1:
+
+            attribute_test_modificado[i, j] = 0
 
 predicciones = [xgboostModel.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in test_attributes]
 
@@ -322,14 +362,9 @@ for i in range(len(predicciones)):
 
 num_features = training_attributes.shape[1]
 
-for i in range(4):
+for i in range(len(predicciones)):
 
-    attribute_test_modified = test_attributes.copy()
-    attribute_test_modified[:, i] = 0 
-
-for i in range(10746):
-
-    y_pred_modified = xgboostModel.predict(xgb.DMatrix(np.array(attribute_test_modified[i][:]).reshape(1, -1)))
+    y_pred_modified = xgboostModel.predict(xgb.DMatrix(np.array(attribute_test_modificado[i][:]).reshape(1, -1)))
 
     predicciones_modificadas.append(y_pred_modified)
 
@@ -345,8 +380,7 @@ for i in range(len(predicciones_modificadas)):
     
     errores_prediccion_modificada.append(error_pred_mod)
 
-
-print(selectividad(training_attributes, test_attributes, test_goal, randomForestModel))
 for i in range(len(errores_prediccion)):
 
     print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
+
