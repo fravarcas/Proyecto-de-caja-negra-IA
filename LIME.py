@@ -274,7 +274,7 @@ def selectividad(test_attribute, test_goal, f, orden):
         auc_values.append(auc_change)
 
     selectivity_scores = auc_values
-
+    #la función devuelve una lista con las areas bajo la curva calculadas por cada columna de atributos que se ha ido eliminando
     return selectivity_scores
 
 #recibe como parametros el error total del conjunto de muestras y el error total del conjunto modificado eliminando las variables irrelevantes
@@ -345,8 +345,7 @@ for x in muestras_de_medida_poker:
     #medida de identidad para red neuronal y datos poker
 
     #print(identidad(x, x, neural_network, max_attributes_poker, min_attributes_poker))
-'''
-'''
+
 #medida de separabilidad
 for i in range(muestras_de_medida_adult.shape[0]):
     if i < muestras_de_medida_adult.shape[0] - 1:
@@ -361,7 +360,7 @@ for i in range(muestras_de_medida_poker.shape[0]):
         #medida de separabilidad para xgboost y datos poker
         print(separabilidad(muestras_de_medida_poker[i,:], muestras_de_medida_poker[i+1,:], xgboostModel_poker, max_attributes_poker, min_attributes_poker))
 
-'''
+
 
 #medida de selectividad
     #calculo de los atributos más relevantes de cada columna para datos adult
@@ -371,7 +370,7 @@ attribute_training_modificado_adult = training_attributes.copy()
 filas_adult, columnas_adult = attribute_training_modificado_adult.shape
 
     #este for sirve para calcular cuantas veces aparece el atributo que más aparece en cada columna la lista de nuevo orden se ha formado de forma manual utilizando estos datos
-'''
+
 for j in range(columnas_adult):
 
     d = {}
@@ -389,7 +388,7 @@ for j in range(columnas_adult):
     valor_top_1 = sorted(list(d.values()), reverse=True)[:1]
 
     print(valor_top_1)
-'''
+
 
 nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 
@@ -397,7 +396,7 @@ nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 attribute_training_modificado_poker = training_attributes_poker.copy()
 
 filas_poker, columnas_poker = attribute_training_modificado_poker.shape
-'''
+
 for j in range(columnas_poker):
 
     d = {}
@@ -415,17 +414,17 @@ for j in range(columnas_poker):
     valor_top_1 = sorted(list(d.values()), reverse=True)[:1]
 
     print(valor_top_1)
-'''
+
 nuevo_orden_poker = [0, 4, 8, 6, 2, 7, 9, 3, 5, 1]
 
     #medida de selectividad para datos adult y random forest
-#print(selectividad(muestras_de_medida_adult, objetivos_adult, randomForestModel, nuevo_orden_adult))
+print(selectividad(muestras_de_medida_adult, objetivos_adult, randomForestModel, nuevo_orden_adult))
 
     #medida de selectividad para datos adult y xgboost
-#print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult, tipo='binary'))
+print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult, tipo='binary'))
 
     #medida de selectividad para datos poker y xgboost
-#print(selectividad(muestras_de_medida_poker, objetivos_poker, xgboostModel_poker, nuevo_orden_poker, tipo='multiclass'))
+print(selectividad(muestras_de_medida_poker, objetivos_poker, xgboostModel_poker, nuevo_orden_poker, tipo='multiclass'))
 
 #medida de coherencia
 diccionario_variables_irrelevantes_adult = {}
@@ -782,3 +781,4 @@ for i in range(len(errores_prediccion)):
     coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
 
 print(congruencia(muestras_adult, coherencias))
+'''
