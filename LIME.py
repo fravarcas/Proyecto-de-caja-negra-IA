@@ -200,7 +200,7 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
     return G.coef_, G.intercept_, G
 
 #Metricas
-
+#recibe como parametros dos muestras a las que calcular la distancia así como los parametros necesarios para poder obtener sus explicaciones mediante LIME
 def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
     d_1, a, b = LIMEAlgorithm(muestra_1, f, 10000, max_attribute, min_attribute)
@@ -208,7 +208,7 @@ def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
-    if distancia_muestras == 1.0 or 0.9999999999999999:
+    if distancia_muestras == 1.0:
 
         distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
 
@@ -219,7 +219,7 @@ def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
         print('estas muestras no son identicas')
         
         
-
+#mismos parametros que identidad
 def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
     d_1, a, b = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
@@ -237,7 +237,7 @@ def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
     else:
 
         print("estas muestras son identicas por lo tanto no se puede comprobar separabilidad")
-
+#recibe como parametros una matriz con explicaciones similares y otra matriz con explicaciones con grandes diferencias
 def estabilidad(explicaciones_similares, explicaciones_diferentes):
      
     matriz_similares = np.array(explicaciones_similares)
@@ -246,7 +246,8 @@ def estabilidad(explicaciones_similares, explicaciones_diferentes):
     correlacion, _ = spearmanr(matriz_similares, matriz_diferentes, axis=1)
     
     return correlacion
-
+#recibe como parametros los atributos y objetivos a utilizar para las predicciones así como el modelo con el que se realizan las predicciones y el orden previamente calculado en el que se van a eliminar las columnas de atributos
+#de la mas a la menos relevante
 def selectividad(test_attribute, test_goal, f, orden):
     if f == randomForestModel:
         y_pred_orig = f.predict(test_attribute)
