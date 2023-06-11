@@ -42,6 +42,9 @@ poker_hands = pd.read_csv('proyecto_caja_negra/poker-hand-testing.data', header=
 attributes_poker = poker_hands.loc[:, 'S1':'C5']
 goal_poker = poker_hands['class']
 
+max_attributes_poker = [max(codified_attributes[:, x]) for x in range(10)]
+min_attributes_poker = [min(codified_attributes[:, x]) for x in range(10)]
+
 
 (training_attributes_poker, test_attributes_poker,
  training_goal_poker, test_goal_poker) = model_selection.train_test_split(attributes_poker, goal_poker, random_state=12345, test_size=.33, stratify=goal_poker)
@@ -63,7 +66,7 @@ params = {
 xgboostModel = xgb.train(params, training_data)
 
 #Entrenamiento de modelo redes neuronales para datos poker_hands
-
+'''
 attributes_neural_network = attributes_poker.to_numpy()
 goal_neural_network = goal_poker.to_numpy()
 
@@ -86,7 +89,7 @@ poker_hand.compile(optimizer='SGD', loss='categorical_crossentropy')
 
 poker_hand.fit(training_attributes_neural, training_goal_neural,
                 batch_size=256, epochs=5)
-
+'''
 #Entrenamiento de modelo xgboost para datos poker_hands
 
 training_data_poker = xgb.DMatrix(training_attributes_poker, label= training_goal_poker)
@@ -185,30 +188,23 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
     G = Ridge()
     G.fit(R_ponderada, Y)
 
-    return G.coef_
+    return G.coef_, G.intercept_, G
 
 #Metricas
 
 def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1 = LIMEAlgorithm(muestra_1, f, 1000, max_attribute, min_attribute)
-    d_2 = LIMEAlgorithm(muestra_2, f, 1000, max_attribute, min_attribute)
+    d_1, a, b = LIMEAlgorithm(muestra_1, f, 1000, max_attribute, min_attribute)
+    d_2, a, b = LIMEAlgorithm(muestra_2, f, 1000, max_attribute, min_attribute)
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
-    if distancia_muestras == 0.9999999999999999:
+    if distancia_muestras == 1.0:
 
         distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
 
-        if distancia_explicación == 0.9999999999999999:
+        return distancia_explicación
 
-            print('estas muestras cumplen la metrica de identidad')
-
-        else:
-
-            print('estas muestras no cumplen con la metrica de identidad')
-
-    
     else:
 
         print('estas muestras no son identicas')
@@ -217,23 +213,17 @@ def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
         
 def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1 = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
-    d_2 = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
+    d_1, a, b = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
+    d_2, a, b = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
 
 
     distacia_muestras_ab = cosine_distance(muestra_1, muestra_2)
 
-    if distacia_muestras_ab != 0.9999999999999999:
+    if distacia_muestras_ab != 1.0:
         
         distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
     
-        if distancia_explicación == 0.9999999999999999:
-    
-            print("estas muestras no cumplen con la metrica de separabilidad")
-
-        else:
-
-            print("estas muestras cumplen con la metrica de separabilidad")
+        return distancia_explicación
 
     else:
 
@@ -273,17 +263,45 @@ def coherencia(p, e):
     return diferencia
 
 
-def completitud(error_explicacion, error_prediccion):
-    return (error_explicacion / error_prediccion) *100
+def completitud(muestras, G, f, test):
+    
+    numero_de_muestras = muestras.shape[0]
+    error_explicacion = 0
+    error_prediccion = 0
+
+    for i in range(numero_de_muestras):
+
+        muestra = muestras[i, :]
+        explicacion = np.dot(G[i].coef_, muestra) + G[i].intercept_
+        prediccion = f.predict(muestra.reshape(1, -1))
+        prediccion_explicacion = 1 if explicacion > 0.5 else 0
+
+        if prediccion_explicacion != prediccion:
+
+            error_explicacion = error_explicacion + 1
+
+        if prediccion != test[i]:
+
+            error_prediccion = error_prediccion + 1
+
+    return error_explicacion / error_prediccion
 
 
-def congruencia(coherencia):
+def congruencia(muestras):
     n=len(coherencia)
     promedio=sum(coherencia)/n
     suma=sum((a-promedio)**2 for a in coherencia)
     result = math.sqrt(suma/n)
     return result
 
+#medida de identidad
+
+identidad(test_attributes[5,:], test_attributes[5,:], randomForestModel, max_attributes_adults, min_attributes_adults)
+
+#medida de separabilidad
+
+print(separabilidad(test_attributes[5,:], test_attributes[8,:], randomForestModel, max_attributes_adults, min_attributes_adults))
+'''
 #medida de selectividad
 attribute_training_modificado = training_attributes.copy()
 
@@ -383,4 +401,21 @@ for i in range(len(predicciones_modificadas)):
 for i in range(len(errores_prediccion)):
 
     print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
+
+
+'''
+#medida completitud
+
+muestras = test_attributes[5:100,:]
+test = test_goal[5:100]
+lista_G = []
+for x in muestras:
+    a, b, c = LIMEAlgorithm(x,randomForestModel, 100, max_attributes_adults,min_attributes_adults)
+    lista_G.append(c)
+
+print(completitud(muestras, lista_G, randomForestModel, test))
+
+#medida de congruencia
+
+muestras = test_attributes[5:100]
 
