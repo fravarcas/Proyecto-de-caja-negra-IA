@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sc
 import pandas as pd
 import sklearn as sk
+import math
 from sklearn.metrics import precision_score, roc_auc_score
 import xgboost as xgb
 from sklearn.linear_model import Ridge
@@ -11,6 +12,7 @@ from sklearn import svm
 from scipy.stats import spearmanr
 from tensorflow import keras
 from keras.utils import to_categorical
+from sklearn.preprocessing import label_binarize
 
 #carga de datos
 adults = pd.read_csv('proyecto_caja_negra/adult.data', header=None,
@@ -42,12 +44,19 @@ poker_hands = pd.read_csv('proyecto_caja_negra/poker-hand-testing.data', header=
 attributes_poker = poker_hands.loc[:, 'S1':'C5']
 goal_poker = poker_hands['class']
 
-max_attributes_poker = [max(codified_attributes[:, x]) for x in range(10)]
-min_attributes_poker = [min(codified_attributes[:, x]) for x in range(10)]
+codificator_attributes_poker = sk.preprocessing.OrdinalEncoder()
+codificator_attributes_poker.fit(attributes_poker)
+codified_attributes_poker = codificator_attributes_poker.transform(attributes_poker)
+
+codificator_goal_poker = sk.preprocessing.LabelEncoder()
+codified_goal_poker = codificator_goal_poker.fit_transform(goal_poker)
+
+max_attributes_poker = [max(codified_attributes_poker[:, x]) for x in range(10)]
+min_attributes_poker = [min(codified_attributes_poker[:, x]) for x in range(10)]
 
 
 (training_attributes_poker, test_attributes_poker,
- training_goal_poker, test_goal_poker) = model_selection.train_test_split(attributes_poker, goal_poker, random_state=12345, test_size=.33, stratify=goal_poker)
+ training_goal_poker, test_goal_poker) = model_selection.train_test_split(codified_attributes_poker, codified_goal_poker, random_state=12345, test_size=.33, stratify=codified_goal_poker)
 
 #Entrenamiento de modelo random forest model para datos adult
 randomForestModel = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
@@ -63,10 +72,10 @@ params = {
     'eval_metric': 'logloss',
 }
 
-xgboostModel = xgb.train(params, training_data)
+xgboostModel_adult = xgb.train(params, training_data)
 
 #Entrenamiento de modelo redes neuronales para datos poker_hands
-'''
+
 attributes_neural_network = attributes_poker.to_numpy()
 goal_neural_network = goal_poker.to_numpy()
 
@@ -79,17 +88,17 @@ codified_goal_poker = to_categorical(goal_neural_network, classes)
 normalizador = keras.layers.Normalization()
 normalizador.adapt(training_attributes_neural)
 
-poker_hand = keras.Sequential()
-poker_hand.add(keras.Input(shape=(10,)))
-poker_hand.add(normalizador)
-poker_hand.add(keras.layers.Dense(12))
-poker_hand.add(keras.layers.Dense(12))
-poker_hand.add(keras.layers.Dense(10, activation='softmax'))
-poker_hand.compile(optimizer='SGD', loss='categorical_crossentropy')
+neural_network = keras.Sequential()
+neural_network.add(keras.Input(shape=(10,)))
+neural_network.add(normalizador)
+neural_network.add(keras.layers.Dense(12))
+neural_network.add(keras.layers.Dense(12))
+neural_network.add(keras.layers.Dense(10, activation='softmax'))
+neural_network.compile(optimizer='SGD', loss='categorical_crossentropy')
 
-poker_hand.fit(training_attributes_neural, training_goal_neural,
+neural_network.fit(training_attributes_neural, training_goal_neural,
                 batch_size=256, epochs=5)
-'''
+
 #Entrenamiento de modelo xgboost para datos poker_hands
 
 training_data_poker = xgb.DMatrix(training_attributes_poker, label= training_goal_poker)
@@ -103,7 +112,7 @@ params = {
     'num_class': '10'
 }
 
-xgboostModel = xgb.train(params, training_data)
+xgboostModel_poker = xgb.train(params, training_data_poker)
 
 
 #función para calcular la distancia coseno de dos muestras
@@ -172,13 +181,13 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
         R_ponderada.append(R_muestra_ponderada)
 
     #Realizamos las predicciones de las permutaciones con el modelo pasado como parametro
-    if f == randomForestModel:
+    if f == randomForestModel or f == neural_network:
         for i in range(len(X)):
 
             prediction = f.predict(np.array(X[i]).reshape(1, -1))
             Y.append(prediction)
 
-    elif f == xgboostModel:
+    elif f == xgboostModel_adult or f == xgboostModel_poker:
         for i in range(len(X)):
             test = np.array(X[i]).reshape(1, -1)
             test_xgb = xgb.DMatrix(test)
@@ -194,12 +203,12 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
 
 def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1, a, b = LIMEAlgorithm(muestra_1, f, 1000, max_attribute, min_attribute)
-    d_2, a, b = LIMEAlgorithm(muestra_2, f, 1000, max_attribute, min_attribute)
+    d_1, a, b = LIMEAlgorithm(muestra_1, f, 10000, max_attribute, min_attribute)
+    d_2, a, b = LIMEAlgorithm(muestra_2, f, 10000, max_attribute, min_attribute)
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
-    if distancia_muestras == 1.0:
+    if distancia_muestras == 1.0 or 0.9999999999999999:
 
         distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
 
@@ -239,8 +248,13 @@ def estabilidad(explicaciones_similares, explicaciones_diferentes):
     return correlacion
        
 def selectividad(test_attribute, test_goal, f, orden):
+    if f == randomForestModel:
+        y_pred_orig = f.predict(test_attribute)
+    else:
+        test = test_attribute
+        test_xgb = xgb.DMatrix(test)
+        y_pred_orig = f.predict(test_xgb)
 
-    y_pred_orig = f.predict(test_attribute)
     auc_orig = roc_auc_score(test_goal, y_pred_orig)
     auc_values = []
 
@@ -248,7 +262,12 @@ def selectividad(test_attribute, test_goal, f, orden):
 
         attribute_test_modified = test_attribute.copy()
         attribute_test_modified[:, i] = 0 
-        y_pred_modified = f.predict(attribute_test_modified)
+        if f == randomForestModel:
+            y_pred_modified = f.predict(attribute_test_modified)
+        else:
+            test = attribute_test_modified
+            test_xgb = xgb.DMatrix(test)
+            y_pred_modified = f.predict(test_xgb)
         auc_modified = roc_auc_score(test_goal, y_pred_modified)
         auc_change = auc_orig - auc_modified
         auc_values.append(auc_change)
@@ -287,27 +306,66 @@ def completitud(muestras, G, f, test):
     return error_explicacion / error_prediccion
 
 
-def congruencia(muestras):
-    n=len(coherencia)
-    promedio=sum(coherencia)/n
-    suma=sum((a-promedio)**2 for a in coherencia)
+def congruencia(muestras, coherencias):
+
+    n=muestras.shape[0]
+    promedio=sum(coherencias)/n
+    suma=sum((a-promedio)**2 for a in coherencias)
     result = math.sqrt(suma/n)
+
     return result
 
-#medida de identidad
+#muestras a medir
+muestras_de_medida_adult = test_attributes[:256, :]
+muestras_de_medida_poker = test_attributes_poker[:256, :]
 
-identidad(test_attributes[5,:], test_attributes[5,:], randomForestModel, max_attributes_adults, min_attributes_adults)
-
-#medida de separabilidad
-
-print(separabilidad(test_attributes[5,:], test_attributes[8,:], randomForestModel, max_attributes_adults, min_attributes_adults))
+objetivos_adult = test_goal[:256]
+objetivos_poker = test_goal_poker[:256]
 '''
+for x in muestras_de_medida_adult:
+    #medida de identidad para random forest y datos adult
+
+    print(identidad(x, x, randomForestModel, max_attributes_adults, min_attributes_adults))
+
+    #medida de identidad para xgboost y datos adult
+
+    print(identidad(x, x, xgboostModel_adult, max_attributes_adults, min_attributes_adults))
+
+for x in muestras_de_medida_poker:
+    #medida de identidad para xgboost y datos poker
+
+    print(identidad(x, x, xgboostModel_poker, max_attributes_poker, min_attributes_poker))
+
+    #medida de identidad para red neuronal y datos poker
+
+    #print(identidad(x, x, neural_network, max_attributes_poker, min_attributes_poker))
+'''
+'''
+#medida de separabilidad
+for i in range(muestras_de_medida_adult.shape[0]):
+    if i < muestras_de_medida_adult.shape[0] - 1:
+        #medida de separabilidad para random forest y datos adult
+        print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], randomForestModel, max_attributes_adults, min_attributes_adults))
+
+        #medida de separabilidad para xgboost y datos adult
+        print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], xgboostModel_adult, max_attributes_adults, min_attributes_adults))
+
+for i in range(muestras_de_medida_poker.shape[0]):
+    if i < muestras_de_medida_poker.shape[0] - 1:
+        #medida de separabilidad para xgboost y datos poker
+        print(separabilidad(muestras_de_medida_poker[i,:], muestras_de_medida_poker[i+1,:], xgboostModel_poker, max_attributes_poker, min_attributes_poker))
+
+'''
+
 #medida de selectividad
+#calculo de los atributos más relevantes de cada columna para datos adult
+#para determinar el orden se han ordenado las columnas de más a menos usando como referencia el atributo que más aparece en cada columna
 attribute_training_modificado = training_attributes.copy()
 
 filas, columnas = attribute_training_modificado.shape
 
-
+#este for sirve para calcular cuantas veces aparece el atributo que más aparece en cada columna la lista de nuevo orden se ha formado de forma manual utilizando estos datos
+'''
 for j in range(columnas):
 
     d = {}
@@ -322,15 +380,47 @@ for j in range(columnas):
 
             d[attribute_training_modificado[i, j]] = 1
 
-    valor_top_1 = sorted(list(d.values()), reverse=False)[:1]
+    valor_top_1 = sorted(list(d.values()), reverse=True)[:1]
 
     print(valor_top_1)
+'''
 
+nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 
-nuevo_orden = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
+#calculo de los atributos más relevantes de cada columna para datos poker
+attribute_training_modificado_poker = training_attributes_poker.copy()
 
-print(selectividad(test_attributes, test_goal, randomForestModel, nuevo_orden))
+filas, columnas = attribute_training_modificado_poker.shape
+'''
+for j in range(columnas):
 
+    d = {}
+
+    for i in range(filas):
+
+        if attribute_training_modificado_poker[i, j] in d:
+
+            d[attribute_training_modificado_poker[i, j]] = d[attribute_training_modificado_poker[i, j]] + 1
+
+        else:
+
+            d[attribute_training_modificado_poker[i, j]] = 1
+
+    valor_top_1 = sorted(list(d.values()), reverse=True)[:1]
+
+    print(valor_top_1)
+'''
+nuevo_orden_poker = [0, 4, 8, 6, 2, 7, 9, 3, 5, 1]
+
+#medida de selectividad para datos adult y random forest
+#print(selectividad(muestras_de_medida_adult, objetivos_adult, randomForestModel, nuevo_orden_adult))
+
+#medida de selectividad para datos adult y xgboost
+print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult, tipo='binary'))
+
+#medida de selectividad para datos poker y xgboost
+#print(selectividad(muestras_de_medida_poker, objetivos_poker, xgboostModel_poker, nuevo_orden_poker, tipo='multiclass'))
+'''
 #medida de coherencia
 diccionario_variables_irrelevantes = {}
 
@@ -403,7 +493,7 @@ for i in range(len(errores_prediccion)):
     print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
 
 
-'''
+
 #medida completitud
 
 muestras = test_attributes[5:100,:]
@@ -418,4 +508,48 @@ print(completitud(muestras, lista_G, randomForestModel, test))
 #medida de congruencia
 
 muestras = test_attributes[5:100]
+predicciones = [xgboostModel.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in muestras]
+coherencias = []
 
+errores_prediccion = []
+errores_prediccion_modificada = []
+predicciones_modificadas = []
+
+for i in range(len(predicciones)):
+
+    if predicciones[i] == test_goal[i]:
+
+        error_pred = 0
+
+    else:
+
+        error_pred = 1
+    
+    errores_prediccion.append(error_pred)
+
+num_features = training_attributes.shape[1]
+
+for i in range(5, 101):
+
+    y_pred_modified = xgboostModel.predict(xgb.DMatrix(np.array(attribute_test_modificado[i][:]).reshape(1, -1)))
+
+    predicciones_modificadas.append(y_pred_modified)
+
+for i in range(len(predicciones_modificadas)):
+
+    if predicciones_modificadas[1] == test_goal[1]:
+
+        error_pred_mod = 0
+
+    else:
+
+        error_pred_mod = 1
+    
+    errores_prediccion_modificada.append(error_pred_mod)
+
+for i in range(len(errores_prediccion)):
+
+    coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
+
+print(congruencia(muestras, coherencias))
+'''
