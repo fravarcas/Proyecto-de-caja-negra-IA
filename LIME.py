@@ -328,36 +328,43 @@ objetivos_adult = test_goal[:256]
 objetivos_poker = test_goal_poker[:256]
 '''
 #medida de identidad
+print("medida de identidad para 256 muestras de adults: ")
 for x in muestras_de_medida_adult:
     #medida de identidad para random forest y datos adult
-
+    print("medida random forest:")
     print(identidad(x, x, randomForestModel, max_attributes_adults, min_attributes_adults))
 
     #medida de identidad para xgboost y datos adult
-
+    print("medida xgboost: ")
     print(identidad(x, x, xgboostModel_adult, max_attributes_adults, min_attributes_adults))
 
+print("medida de identidad para 256 muestras de poker: ")
 for x in muestras_de_medida_poker:
     #medida de identidad para xgboost y datos poker
-
+    print("medida xgboost: ")
     print(identidad(x, x, xgboostModel_poker, max_attributes_poker, min_attributes_poker))
 
     #medida de identidad para red neuronal y datos poker
-
+    print("medida red neuronal: ")
     #print(identidad(x, x, neural_network, max_attributes_poker, min_attributes_poker))
 
 #medida de separabilidad
+print("medida de separabilidad para 256 muestras de adults: ")
 for i in range(muestras_de_medida_adult.shape[0]):
     if i < muestras_de_medida_adult.shape[0] - 1:
         #medida de separabilidad para random forest y datos adult
+        print("medida random forest:")
         print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], randomForestModel, max_attributes_adults, min_attributes_adults))
 
         #medida de separabilidad para xgboost y datos adult
+        print("medida xgboost: ")
         print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], xgboostModel_adult, max_attributes_adults, min_attributes_adults))
 
+print("medida de separabilidad para 256 muestras de poker: ")
 for i in range(muestras_de_medida_poker.shape[0]):
     if i < muestras_de_medida_poker.shape[0] - 1:
         #medida de separabilidad para xgboost y datos poker
+        print("medida xgboost: ")
         print(separabilidad(muestras_de_medida_poker[i,:], muestras_de_medida_poker[i+1,:], xgboostModel_poker, max_attributes_poker, min_attributes_poker))
 
 
@@ -418,13 +425,18 @@ for j in range(columnas_poker):
 nuevo_orden_poker = [0, 4, 8, 6, 2, 7, 9, 3, 5, 1]
 
     #medida de selectividad para datos adult y random forest
+print("medida de selectividad para 256 muestras de adults: ")
+print("medida usando random forest:")
 print(selectividad(muestras_de_medida_adult, objetivos_adult, randomForestModel, nuevo_orden_adult))
 
     #medida de selectividad para datos adult y xgboost
+print("medida usando xgboost:")
 print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult, tipo='binary'))
 
     #medida de selectividad para datos poker y xgboost
-print(selectividad(muestras_de_medida_poker, objetivos_poker, xgboostModel_poker, nuevo_orden_poker, tipo='multiclass'))
+#print("medida de selectividad para 256 muestras de poker: ")
+#print("medida usando xgboost: ")
+#print(selectividad(muestras_de_medida_poker, objetivos_poker, xgboostModel_poker, nuevo_orden_poker, tipo='multiclass'))
 
 #medida de coherencia
 diccionario_variables_irrelevantes_adult = {}
@@ -521,6 +533,8 @@ for i in range(len(predicciones_modificadas)):
     
     errores_prediccion_modificada.append(error_pred_mod)
     #para cada prediccion se calcula la coherencia entre la lista de predicciones con atributos eliminados y la lista normal
+print("medida de coherencia para 256 muestras de datos adult: ")
+print("para xgboost: ")
 for i in range(len(errores_prediccion)):
 
     print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
@@ -564,6 +578,7 @@ for i in range(len(predicciones_modificadas)):
     
     errores_prediccion_modificada.append(error_pred_mod)
     #para cada prediccion se calcula la coherencia entre la lista de predicciones con atributos eliminados y la lista normal
+print("para random forest: ")
 for i in range(len(errores_prediccion)):
 
     print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
@@ -607,6 +622,8 @@ for i in range(len(predicciones_modificadas)):
     
     errores_prediccion_modificada.append(error_pred_mod)
     #para cada prediccion se calcula la coherencia entre la lista de predicciones con atributos eliminados y la lista normal
+print("medida de coherencia para 256 muestras de datos poker: ")
+print("para xgboost: ")
 for i in range(len(errores_prediccion)):
 
     print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
@@ -619,26 +636,33 @@ test_adult = objetivos_adult
 muestras_poker = muestras_de_medida_poker
 test_poker = objetivos_poker
     #Medida de completitud para datos adult y randomforest
+print("medidas de completitud para 256 muestras de datos adult: ")
 lista_G = []
 for x in muestras_adult:
+
     a, b, c = LIMEAlgorithm(x,randomForestModel, 100, max_attributes_adults,min_attributes_adults)
     lista_G.append(c)
 
+print("para random forest:")
 print(completitud(muestras_adult, lista_G, randomForestModel, test_adult))
     #medida de completitud para datos adult y xgboost
 lista_G = []
 for x in muestras_adult:
+
     a, b, c = LIMEAlgorithm(x,xgboostModel_adult, 100, max_attributes_adults,min_attributes_adults)
     lista_G.append(c)
 
+print("para xgboost:")
 print(completitud(muestras_adult, lista_G, xgboostModel_adult, test_adult))
 
     #medida de completitud para datos poker y xgboost
+print("medidas de completitud para 256 muestras de datos poker: ")
 lista_G = []
 for x in muestras_poker:
     a, b, c = LIMEAlgorithm(x,xgboostModel_poker, 100, max_attributes_poker,min_attributes_poker)
     lista_G.append(c)
 
+print("para xgboost:")
 print(completitud(muestras_poker, lista_G, xgboostModel_poker, test_poker))
 
 
@@ -690,6 +714,8 @@ for i in range(len(errores_prediccion)):
 
     coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
 
+print("medidas de congruencia para 256 muestras de datos adult: ")
+print("para xgboost: ")
 print(congruencia(muestras_adult, coherencias))
 
     #medida de congruencia para adult y random forest
@@ -734,7 +760,7 @@ for i in range(len(predicciones_modificadas)):
 for i in range(len(errores_prediccion)):
 
     coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
-
+print("para random forest: ")
 print(congruencia(muestras_adult, coherencias))
 
     #medida de congruencia para poker y xgboost
@@ -780,5 +806,7 @@ for i in range(len(errores_prediccion)):
 
     coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
 
+print("medidas de congruencia para 256 muestras de datos poker: ")
+print("para xgboost: ")
 print(congruencia(muestras_adult, coherencias))
 '''
