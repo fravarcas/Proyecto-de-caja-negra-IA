@@ -284,7 +284,7 @@ def coherencia(p, e):
 
 #recibe como parametros las muestras para calcular la metrica, y una lista con los modelos de ridge generados por la explicación lime para cada una de las muestras
 #tambien recibe el modelo al que calcular la completitud y los resultados que debería de dar el modelo en el parametro test
-def completitud(muestras, G, f, test):
+def completitud(muestras, G, f, test, tipo):
     
     numero_de_muestras = muestras.shape[0]
     error_explicacion = 0
@@ -298,7 +298,12 @@ def completitud(muestras, G, f, test):
             prediccion = f.predict(muestra.reshape(1, -1))
         else:
             prediccion = f.predict(xgb.DMatrix(muestra.reshape(1, -1)))
-        prediccion_explicacion = 1 if explicacion > 0.5 else 0
+
+        if tipo == 'binary':
+            prediccion_explicacion = 1 if explicacion > 0.5 else 0
+
+        elif tipo == 'multiclass':
+             prediccion_explicacion = np.argmax(explicacion)
 
         if prediccion_explicacion != prediccion:
 
@@ -647,7 +652,7 @@ for x in muestras_adult:
     lista_G.append(c)
 
 print("para random forest:")
-print(completitud(muestras_adult, lista_G, randomForestModel, test_adult))
+print(completitud(muestras_adult, lista_G, randomForestModel, test_adult, 'binary'))
     #medida de completitud para datos adult y xgboost
 lista_G = []
 for x in muestras_adult:
@@ -656,7 +661,7 @@ for x in muestras_adult:
     lista_G.append(c)
 
 print("para xgboost:")
-print(completitud(muestras_adult, lista_G, xgboostModel_adult, test_adult))
+print(completitud(muestras_adult, lista_G, xgboostModel_adult, test_adult, 'binary'))
 
     #medida de completitud para datos poker y xgboost
 print("medidas de completitud para 256 muestras de datos poker: ")
@@ -666,7 +671,7 @@ for x in muestras_poker:
     lista_G.append(c)
 
 print("para xgboost:")
-print(completitud(muestras_poker, lista_G, xgboostModel_poker, test_poker))
+print(completitud(muestras_poker, lista_G, xgboostModel_poker, test_poker, 'multiclass'))
 
 
 #medida de congruencia
