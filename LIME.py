@@ -97,7 +97,7 @@ neural_network.add(keras.layers.Dense(10, activation='softmax'))
 neural_network.compile(optimizer='SGD', loss='categorical_crossentropy')
 
 neural_network.fit(training_attributes_neural, training_goal_neural,
-                batch_size=256, epochs=5)
+                batch_size=256, epochs=20)
 
 #Entrenamiento de modelo xgboost para datos poker_hands
 
@@ -203,12 +203,12 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
 #recibe como parametros dos muestras a las que calcular la distancia así como los parametros necesarios para poder obtener sus explicaciones mediante LIME
 def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1, a, b = LIMEAlgorithm(muestra_1, f, 10000, max_attribute, min_attribute)
-    d_2, a, b = LIMEAlgorithm(muestra_2, f, 10000, max_attribute, min_attribute)
+    d_1, a, b = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
+    d_2, a, b = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
-    if distancia_muestras == 1.0:
+    if distancia_muestras == 1.0 or 0.9999999999999999:
 
         distancia_explicación = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(d_2)))
 
@@ -222,8 +222,8 @@ def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 #mismos parametros que identidad
 def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1, a, b = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
-    d_2, a, b = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
+    d_1, a, b = LIMEAlgorithm(muestra_1, f, 500, max_attribute, min_attribute)
+    d_2, a, b = LIMEAlgorithm(muestra_2, f, 500, max_attribute, min_attribute)
 
 
     distacia_muestras_ab = cosine_distance(muestra_1, muestra_2)
@@ -274,7 +274,7 @@ def selectividad(test_attribute, test_goal, f, orden):
         auc_values.append(auc_change)
 
     selectivity_scores = auc_values
-    #la función devuelve una lista con las areas bajo la curva calculadas por cada columna de atributos que se ha ido eliminando
+    #la función devuelve una lista con las diferentes puntuaciones de selectividad obtenidas al ir eliminando cada columna
     return selectivity_scores
 
 #recibe como parametros el error total del conjunto de muestras y el error total del conjunto modificado eliminando las variables irrelevantes
@@ -326,7 +326,7 @@ muestras_de_medida_poker = test_attributes_poker[:256, :]
 
 objetivos_adult = test_goal[:256]
 objetivos_poker = test_goal_poker[:256]
-'''
+
 #medida de identidad
 print("medida de identidad para 256 muestras de adults: ")
 for x in muestras_de_medida_adult:
@@ -345,7 +345,7 @@ for x in muestras_de_medida_poker:
     print(identidad(x, x, xgboostModel_poker, max_attributes_poker, min_attributes_poker))
 
     #medida de identidad para red neuronal y datos poker
-    print("medida red neuronal: ")
+    #print("medida red neuronal: ")
     #print(identidad(x, x, neural_network, max_attributes_poker, min_attributes_poker))
 
 #medida de separabilidad
@@ -372,6 +372,7 @@ for i in range(muestras_de_medida_poker.shape[0]):
 #medida de selectividad
     #calculo de los atributos más relevantes de cada columna para datos adult
     #para determinar el orden se han ordenado las columnas de más a menos usando como referencia el atributo que más aparece en cada columna
+
 attribute_training_modificado_adult = training_attributes.copy()
 
 filas_adult, columnas_adult = attribute_training_modificado_adult.shape
@@ -400,6 +401,7 @@ for j in range(columnas_adult):
 nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 
     #calculo de los atributos más relevantes de cada columna para datos poker
+
 attribute_training_modificado_poker = training_attributes_poker.copy()
 
 filas_poker, columnas_poker = attribute_training_modificado_poker.shape
@@ -431,12 +433,13 @@ print(selectividad(muestras_de_medida_adult, objetivos_adult, randomForestModel,
 
     #medida de selectividad para datos adult y xgboost
 print("medida usando xgboost:")
-print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult, tipo='binary'))
+print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult))
 
     #medida de selectividad para datos poker y xgboost
 #print("medida de selectividad para 256 muestras de poker: ")
 #print("medida usando xgboost: ")
 #print(selectividad(muestras_de_medida_poker, objetivos_poker, xgboostModel_poker, nuevo_orden_poker, tipo='multiclass'))
+
 
 #medida de coherencia
 diccionario_variables_irrelevantes_adult = {}
@@ -809,4 +812,3 @@ for i in range(len(errores_prediccion)):
 print("medidas de congruencia para 256 muestras de datos poker: ")
 print("para xgboost: ")
 print(congruencia(muestras_adult, coherencias))
-'''
