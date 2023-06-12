@@ -97,7 +97,7 @@ neural_network.add(keras.layers.Dense(10, activation='softmax'))
 neural_network.compile(optimizer='SGD', loss='categorical_crossentropy')
 
 neural_network.fit(training_attributes_neural, training_goal_neural,
-                batch_size=256, epochs=20)
+                batch_size=256, epochs=2)
 
 #Entrenamiento de modelo xgboost para datos poker_hands
 
@@ -203,8 +203,8 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
 #recibe como parametros dos muestras a las que calcular la distancia así como los parametros necesarios para poder obtener sus explicaciones mediante LIME
 def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1, a, b = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
-    d_2, a, b = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
+    d_1, _, _ = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
+    d_2, _, _ = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
@@ -222,8 +222,8 @@ def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 #mismos parametros que identidad
 def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
 
-    d_1, a, b = LIMEAlgorithm(muestra_1, f, 500, max_attribute, min_attribute)
-    d_2, a, b = LIMEAlgorithm(muestra_2, f, 500, max_attribute, min_attribute)
+    d_1, _, _ = LIMEAlgorithm(muestra_1, f, 500, max_attribute, min_attribute)
+    d_2, _, _ = LIMEAlgorithm(muestra_2, f, 500, max_attribute, min_attribute)
 
 
     distacia_muestras_ab = cosine_distance(muestra_1, muestra_2)
@@ -237,14 +237,23 @@ def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
     else:
 
         print("estas muestras son identicas por lo tanto no se puede comprobar separabilidad")
-#recibe como parametros una matriz con explicaciones similares y otra matriz con explicaciones con grandes diferencias
-def estabilidad(explicaciones_similares, explicaciones_diferentes):
+#recibe como parametros una muestra, muestras similares y los parametros necesarios para generar una explicación
+def estabilidad(muestra ,muestras_similares, f, max_attribute, min_attribute):
      
-    matriz_similares = np.array(explicaciones_similares)
-    matriz_diferentes = np.array(explicaciones_diferentes)
-        
-    correlacion, _ = spearmanr(matriz_similares, matriz_diferentes, axis=1)
-    
+    distancias_explicaciones = []
+    distancias_muestras = []
+    explicacion_muestra, _, _ = LIMEAlgorithm(muestra, f, 500, max_attribute, min_attribute)
+
+    for x in muestras_similares:
+
+        d_1, _, _ = LIMEAlgorithm(x, f, 500, max_attribute, min_attribute)
+        distancia_muestra = cosine_distance(x, muestra)
+        distancia_explicacion = cosine_distance(np.squeeze(np.asarray(d_1)), np.squeeze(np.asarray(explicacion_muestra)))
+        distancias_explicaciones.append(distancia_explicacion)
+        distancias_muestras.append(distancia_muestra)
+
+    correlacion, _ = spearmanr(distancias_muestras, distancias_explicaciones)
+
     return correlacion
 #recibe como parametros los atributos y objetivos a utilizar para las predicciones así como el modelo con el que se realizan las predicciones y el orden previamente calculado en el que se van a eliminar las columnas de atributos
 #de la mas a la menos relevante
@@ -817,3 +826,10 @@ for i in range(len(errores_prediccion)):
 print("medidas de congruencia para 256 muestras de datos poker: ")
 print("para xgboost: ")
 print(congruencia(muestras_adult, coherencias))
+
+#medida de estabilidad
+
+#muestra = muestras_de_medida_adult[1, :]
+#muestras_similares = muestras_de_medida_adult[2:3, :]
+
+#print(estabilidad(muestra, muestras_similares, randomForestModel, max_attributes_adults, min_attributes_adults))
