@@ -97,7 +97,7 @@ neural_network.add(keras.layers.Dense(10, activation='softmax'))
 neural_network.compile(optimizer='SGD', loss='categorical_crossentropy')
 
 neural_network.fit(training_attributes_neural, training_goal_neural,
-                batch_size=256, epochs=2)
+                batch_size=256, epochs=20)
 
 #Entrenamiento de modelo xgboost para datos poker_hands
 
@@ -201,10 +201,10 @@ def LIMEAlgorithm(data, f, N, max_attributes, min_attributes):
 
 #Metricas
 #recibe como parametros dos muestras a las que calcular la distancia así como los parametros necesarios para poder obtener sus explicaciones mediante LIME
-def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
+def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute, N):
 
-    d_1, _, _ = LIMEAlgorithm(muestra_1, f, 100, max_attribute, min_attribute)
-    d_2, _, _ = LIMEAlgorithm(muestra_2, f, 100, max_attribute, min_attribute)
+    d_1, _, _ = LIMEAlgorithm(muestra_1, f, N, max_attribute, min_attribute)
+    d_2, _, _ = LIMEAlgorithm(muestra_2, f, N, max_attribute, min_attribute)
 
     distancia_muestras = cosine_distance(muestra_1, muestra_2)
 
@@ -220,10 +220,10 @@ def identidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
         
         
 #mismos parametros que identidad
-def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute):
+def separabilidad(muestra_1, muestra_2, f, max_attribute,  min_attribute, N):
 
-    d_1, _, _ = LIMEAlgorithm(muestra_1, f, 500, max_attribute, min_attribute)
-    d_2, _, _ = LIMEAlgorithm(muestra_2, f, 500, max_attribute, min_attribute)
+    d_1, _, _ = LIMEAlgorithm(muestra_1, f, N, max_attribute, min_attribute)
+    d_2, _, _ = LIMEAlgorithm(muestra_2, f, N, max_attribute, min_attribute)
 
 
     distacia_muestras_ab = cosine_distance(muestra_1, muestra_2)
@@ -286,7 +286,7 @@ def selectividad(test_attribute, test_goal, f, orden):
     #la función devuelve una lista con las diferentes puntuaciones de selectividad obtenidas al ir eliminando cada columna
     return selectivity_scores
 
-#recibe como parametros el error total del conjunto de muestras y el error total del conjunto modificado eliminando las variables irrelevantes
+#recibe como parametros las muestras a las que se quiere calcular la coherencia así como dichas muestras preprocesadas para eliminar las variables irrelevantes, ademas del modelo a medir y los atributos objetivo de dichas muestras
 def coherencia(muestras, muestras_modificadas, objetivos, f):
 
     coherencias = []
@@ -394,17 +394,17 @@ print("medida de identidad para 256 muestras de adults: ")
 for x in muestras_de_medida_adult:
     #medida de identidad para random forest y datos adult
     print("medida random forest:")
-    print(identidad(x, x, randomForestModel, max_attributes_adults, min_attributes_adults))
+    print(identidad(x, x, randomForestModel, max_attributes_adults, min_attributes_adults, 1000))
 
     #medida de identidad para xgboost y datos adult
     print("medida xgboost: ")
-    print(identidad(x, x, xgboostModel_adult, max_attributes_adults, min_attributes_adults))
+    print(identidad(x, x, xgboostModel_adult, max_attributes_adults, min_attributes_adults, 1000))
 
 print("medida de identidad para 256 muestras de poker: ")
 for x in muestras_de_medida_poker:
     #medida de identidad para xgboost y datos poker
     print("medida xgboost: ")
-    print(identidad(x, x, xgboostModel_poker, max_attributes_poker, min_attributes_poker))
+    print(identidad(x, x, xgboostModel_poker, max_attributes_poker, min_attributes_poker, 1000))
 
     #medida de identidad para red neuronal y datos poker
     #print("medida red neuronal: ")
@@ -416,18 +416,18 @@ for i in range(muestras_de_medida_adult.shape[0]):
     if i < muestras_de_medida_adult.shape[0] - 1:
         #medida de separabilidad para random forest y datos adult
         print("medida random forest:")
-        print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], randomForestModel, max_attributes_adults, min_attributes_adults))
+        print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], randomForestModel, max_attributes_adults, min_attributes_adults, 500))
 
         #medida de separabilidad para xgboost y datos adult
         print("medida xgboost: ")
-        print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], xgboostModel_adult, max_attributes_adults, min_attributes_adults))
+        print(separabilidad(muestras_de_medida_adult[i,:], muestras_de_medida_adult[i+1,:], xgboostModel_adult, max_attributes_adults, min_attributes_adults, 500))
 
 print("medida de separabilidad para 256 muestras de poker: ")
 for i in range(muestras_de_medida_poker.shape[0]):
     if i < muestras_de_medida_poker.shape[0] - 1:
         #medida de separabilidad para xgboost y datos poker
         print("medida xgboost: ")
-        print(separabilidad(muestras_de_medida_poker[i,:], muestras_de_medida_poker[i+1,:], xgboostModel_poker, max_attributes_poker, min_attributes_poker))
+        print(separabilidad(muestras_de_medida_poker[i,:], muestras_de_medida_poker[i+1,:], xgboostModel_poker, max_attributes_poker, min_attributes_poker, 500))
 
 
 
