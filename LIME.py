@@ -287,9 +287,57 @@ def selectividad(test_attribute, test_goal, f, orden):
     return selectivity_scores
 
 #recibe como parametros el error total del conjunto de muestras y el error total del conjunto modificado eliminando las variables irrelevantes
-def coherencia(p, e):
-    diferencia=abs(p-e)
-    return diferencia
+def coherencia(muestras, muestras_modificadas, objetivos, f):
+
+    coherencias = []
+
+    if f == randomForestModel:
+        predicciones = [randomForestModel.predict(x.reshape(1, -1)) for x in muestras]
+    else:
+        predicciones = [xgboostModel_adult.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in muestras]
+
+    errores_prediccion = []
+    errores_prediccion_modificada = []
+    predicciones_modificadas = []
+
+    for i in range(len(predicciones)):
+
+        if predicciones[i] == objetivos[i]:
+
+            error_pred = 0
+
+        else:
+
+            error_pred = 1
+        
+        errores_prediccion.append(error_pred)
+
+    for i in range(len(predicciones)):
+        if f == randomForestModel:
+            y_pred_modified = randomForestModel.predict(muestras_de_medida_adult_modificado[i][:].reshape(1, -1))
+        else:
+            y_pred_modified = xgboostModel_adult.predict(xgb.DMatrix(np.array(muestras_modificadas[i][:]).reshape(1, -1)))
+
+        predicciones_modificadas.append(y_pred_modified)
+
+    for i in range(len(predicciones_modificadas)):
+
+        if predicciones_modificadas[i] == objetivos[i]:
+
+            error_pred_mod = 0
+
+        else:
+
+            error_pred_mod = 1
+    
+        errores_prediccion_modificada.append(error_pred_mod)
+
+    for i in range(len(errores_prediccion)):
+
+        diferencia=abs(errores_prediccion[i]- errores_prediccion_modificada[i])
+        coherencias.append(diferencia)
+    
+    return coherencias
 
 #recibe como parametros las muestras para calcular la metrica, y una lista con los modelos de ridge generados por la explicación lime para cada una de las muestras
 #tambien recibe el modelo al que calcular la completitud y los resultados que debería de dar el modelo en el parametro test
@@ -392,7 +440,7 @@ attribute_training_modificado_adult = training_attributes.copy()
 filas_adult, columnas_adult = attribute_training_modificado_adult.shape
 
     #este for sirve para calcular cuantas veces aparece el atributo que más aparece en cada columna la lista de nuevo orden se ha formado de forma manual utilizando estos datos
-
+'''
 for j in range(columnas_adult):
 
     d = {}
@@ -411,7 +459,7 @@ for j in range(columnas_adult):
 
     print(valor_top_1)
 
-
+'''
 nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 
     #calculo de los atributos más relevantes de cada columna para datos poker
@@ -419,7 +467,7 @@ nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 attribute_training_modificado_poker = training_attributes_poker.copy()
 
 filas_poker, columnas_poker = attribute_training_modificado_poker.shape
-
+'''
 for j in range(columnas_poker):
 
     d = {}
@@ -437,7 +485,7 @@ for j in range(columnas_poker):
     valor_top_1 = sorted(list(d.values()), reverse=True)[:1]
 
     print(valor_top_1)
-
+'''
 nuevo_orden_poker = [0, 4, 8, 6, 2, 7, 9, 3, 5, 1]
 
     #medida de selectividad para datos adult y random forest
@@ -511,141 +559,18 @@ for i in range(filas):
         if muestras_de_medida_poker_modificado[i, j] in claves_valor_1_poker:
 
             muestras_de_medida_poker_modificado[i, j] = 0
-    #se hacen las predicciones normales y se calculan los errores esto es con xgboost y datos adult
-predicciones = [xgboostModel_adult.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in muestras_de_medida_adult]
-
-errores_prediccion = []
-errores_prediccion_modificada = []
-predicciones_modificadas = []
-
-for i in range(len(predicciones)):
-
-    if predicciones[i] == objetivos_adult[i]:
-
-        error_pred = 0
-
-    else:
-
-        error_pred = 1
-    
-    errores_prediccion.append(error_pred)
-
-num_features = training_attributes.shape[1]
-
-for i in range(len(predicciones)):
-
-    y_pred_modified = xgboostModel_adult.predict(xgb.DMatrix(np.array(muestras_de_medida_adult_modificado[i][:]).reshape(1, -1)))
-
-    predicciones_modificadas.append(y_pred_modified)
-
-for i in range(len(predicciones_modificadas)):
-
-    if predicciones_modificadas[i] == objetivos_adult[i]:
-
-        error_pred_mod = 0
-
-    else:
-
-        error_pred_mod = 1
-    
-    errores_prediccion_modificada.append(error_pred_mod)
-    #para cada prediccion se calcula la coherencia entre la lista de predicciones con atributos eliminados y la lista normal
-print("medida de coherencia para 256 muestras de datos adult: ")
-print("para xgboost: ")
-for i in range(len(errores_prediccion)):
-
-    print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
-
-    #para adult y random forest
-predicciones = [randomForestModel.predict(x.reshape(1, -1)) for x in muestras_de_medida_adult]
-
-errores_prediccion = []
-errores_prediccion_modificada = []
-predicciones_modificadas = []
-
-for i in range(len(predicciones)):
-
-    if predicciones[i] == objetivos_adult[i]:
-
-        error_pred = 0
-
-    else:
-
-        error_pred = 1
-    
-    errores_prediccion.append(error_pred)
-
-num_features = training_attributes.shape[1]
-
-for i in range(len(predicciones)):
-
-    y_pred_modified = randomForestModel.predict(muestras_de_medida_adult_modificado[i][:].reshape(1, -1))
-
-    predicciones_modificadas.append(y_pred_modified)
-
-for i in range(len(predicciones_modificadas)):
-
-    if predicciones_modificadas[i] == objetivos_adult[i]:
-
-        error_pred_mod = 0
-
-    else:
-
-        error_pred_mod = 1
-    
-    errores_prediccion_modificada.append(error_pred_mod)
-    #para cada prediccion se calcula la coherencia entre la lista de predicciones con atributos eliminados y la lista normal
+    #coherencia para adult y randomforest:
+print("medidas de coherencia para 256 muestras de adult: ")
 print("para random forest: ")
-for i in range(len(errores_prediccion)):
-
-    print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
-
-    #para poker y xgboost
-predicciones = [xgboostModel_poker.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in muestras_de_medida_poker]
-
-errores_prediccion = []
-errores_prediccion_modificada = []
-predicciones_modificadas = []
-
-for i in range(len(predicciones)):
-
-    if predicciones[i] == objetivos_poker[i]:
-
-        error_pred = 0
-
-    else:
-
-        error_pred = 1
-    
-    errores_prediccion.append(error_pred)
-
-num_features = training_attributes_poker.shape[1]
-
-for i in range(len(predicciones)):
-
-    y_pred_modified = xgboostModel_poker.predict(xgb.DMatrix(np.array(muestras_de_medida_poker_modificado[i][:]).reshape(1, -1)))
-
-    predicciones_modificadas.append(y_pred_modified)
-
-for i in range(len(predicciones_modificadas)):
-
-    if predicciones_modificadas[i] == objetivos_poker[i]:
-
-        error_pred_mod = 0
-
-    else:
-
-        error_pred_mod = 1
-    
-    errores_prediccion_modificada.append(error_pred_mod)
-    #para cada prediccion se calcula la coherencia entre la lista de predicciones con atributos eliminados y la lista normal
-print("medida de coherencia para 256 muestras de datos poker: ")
+print(coherencia(muestras_de_medida_adult, muestras_de_medida_adult_modificado,objetivos_adult, randomForestModel))
+    #coherencia para adult y xgboost:
 print("para xgboost: ")
-for i in range(len(errores_prediccion)):
+print(coherencia(muestras_de_medida_adult, muestras_de_medida_adult_modificado,objetivos_adult, xgboostModel_adult))
 
-    print(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
-
-
+    #coherencia para poker y xgboost:
+print("medidas de coherencia para 256 muestras de adult: ")
+print("para xgboost: ")
+print(coherencia(muestras_de_medida_poker, muestras_de_medida_poker_modificado,objetivos_poker, xgboostModel_poker))
 #medida completitud
 
 muestras_adult = muestras_de_medida_adult
@@ -685,147 +610,26 @@ print(completitud(muestras_poker, lista_G, xgboostModel_poker, test_poker, 'mult
 
 #medida de congruencia
 
-muestras_adult = muestras_de_medida_adult
-muestras_poker = muestras_de_medida_poker
     #medida de congruencia para adult y xgboost
-
+coherencias = coherencia(muestras_de_medida_adult, muestras_de_medida_adult_modificado,objetivos_adult, xgboostModel_adult)
     # se crea una lista con las coherencias para las diferentes muestras para ello se calculan los errores necesarios para la metrica de coherencia y se van añadiendo las coherencias a la lista
-predicciones = [xgboostModel_adult.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in muestras_adult]
-coherencias = []
-
-errores_prediccion = []
-errores_prediccion_modificada = []
-predicciones_modificadas = []
-
-for i in range(len(predicciones)):
-
-    if predicciones[i] == objetivos_adult[i]:
-
-        error_pred = 0
-
-    else:
-
-        error_pred = 1
-    
-    errores_prediccion.append(error_pred)
-
-for i in range(len(predicciones)):
-
-    y_pred_modified = xgboostModel_adult.predict(xgb.DMatrix(np.array(muestras_de_medida_adult_modificado[i][:]).reshape(1, -1)))
-
-    predicciones_modificadas.append(y_pred_modified)
-
-for i in range(len(predicciones_modificadas)):
-
-    if predicciones_modificadas[1] == objetivos_adult[1]:
-
-        error_pred_mod = 0
-
-    else:
-
-        error_pred_mod = 1
-    
-    errores_prediccion_modificada.append(error_pred_mod)
-
-for i in range(len(errores_prediccion)):
-
-    coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
-
 print("medidas de congruencia para 256 muestras de datos adult: ")
 print("para xgboost: ")
-print(congruencia(muestras_adult, coherencias))
+print(congruencia(muestras_de_medida_adult, coherencias))
 
     #medida de congruencia para adult y random forest
 
-predicciones = [randomForestModel.predict(x.reshape(1, -1)) for x in muestras_adult]
-coherencias = []
-
-errores_prediccion = []
-errores_prediccion_modificada = []
-predicciones_modificadas = []
-
-for i in range(len(predicciones)):
-
-    if predicciones[i] == objetivos_adult[i]:
-
-        error_pred = 0
-
-    else:
-
-        error_pred = 1
-    
-    errores_prediccion.append(error_pred)
-
-for i in range(len(predicciones)):
-
-    y_pred_modified = randomForestModel.predict(muestras_de_medida_adult_modificado[i][:].reshape(1, -1))
-
-    predicciones_modificadas.append(y_pred_modified)
-
-for i in range(len(predicciones_modificadas)):
-
-    if predicciones_modificadas[1] == objetivos_adult[1]:
-
-        error_pred_mod = 0
-
-    else:
-
-        error_pred_mod = 1
-    
-    errores_prediccion_modificada.append(error_pred_mod)
-
-for i in range(len(errores_prediccion)):
-
-    coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
+coherencias = coherencia(muestras_de_medida_adult, muestras_de_medida_adult_modificado,objetivos_adult, randomForestModel)
 print("para random forest: ")
-print(congruencia(muestras_adult, coherencias))
+print(congruencia(muestras_de_medida_adult, coherencias))
 
     #medida de congruencia para poker y xgboost
 
-predicciones = [xgboostModel_poker.predict(xgb.DMatrix(np.array(x).reshape(1, -1))) for x in muestras_poker]
-coherencias = []
-
-errores_prediccion = []
-errores_prediccion_modificada = []
-predicciones_modificadas = []
-
-for i in range(len(predicciones)):
-
-    if predicciones[i] == objetivos_poker[i]:
-
-        error_pred = 0
-
-    else:
-
-        error_pred = 1
-    
-    errores_prediccion.append(error_pred)
-
-for i in range(len(predicciones)):
-
-    y_pred_modified = xgboostModel_poker.predict(xgb.DMatrix(np.array(muestras_de_medida_poker_modificado[i][:]).reshape(1, -1)))
-
-    predicciones_modificadas.append(y_pred_modified)
-
-for i in range(len(predicciones_modificadas)):
-
-    if predicciones_modificadas[1] == objetivos_poker[1]:
-
-        error_pred_mod = 0
-
-    else:
-
-        error_pred_mod = 1
-    
-    errores_prediccion_modificada.append(error_pred_mod)
-
-for i in range(len(errores_prediccion)):
-
-    coherencias.append(coherencia(errores_prediccion[i], errores_prediccion_modificada[i]))
+coherencias = coherencia(muestras_de_medida_poker, muestras_de_medida_poker_modificado,objetivos_poker, xgboostModel_poker)
 
 print("medidas de congruencia para 256 muestras de datos poker: ")
 print("para xgboost: ")
-print(congruencia(muestras_adult, coherencias))
+print(congruencia(muestras_de_medida_poker, coherencias))
 
 #medida de estabilidad
 
