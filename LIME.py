@@ -314,9 +314,9 @@ def coherencia(muestras, muestras_modificadas, objetivos, f):
 
     for i in range(len(predicciones)):
         if f == randomForestModel:
-            y_pred_modified = randomForestModel.predict(muestras_de_medida_adult_modificado[i][:].reshape(1, -1))
+            y_pred_modified = randomForestModel.predict(muestras_de_medida_adult_modificado[i, :].reshape(1, -1))
         else:
-            y_pred_modified = xgboostModel_adult.predict(xgb.DMatrix(np.array(muestras_modificadas[i][:]).reshape(1, -1)))
+            y_pred_modified = xgboostModel_adult.predict(xgb.DMatrix(np.array(muestras_modificadas[i, :]).reshape(1, -1)))
 
         predicciones_modificadas.append(y_pred_modified)
 
@@ -388,7 +388,7 @@ muestras_de_medida_poker = test_attributes_poker[:256, :]
 
 objetivos_adult = test_goal[:256]
 objetivos_poker = test_goal_poker[:256]
-
+'''
 #medida de identidad
 print("medida de identidad para 256 muestras de adults: ")
 for x in muestras_de_medida_adult:
@@ -430,7 +430,7 @@ for i in range(muestras_de_medida_poker.shape[0]):
         print(separabilidad(muestras_de_medida_poker[i,:], muestras_de_medida_poker[i+1,:], xgboostModel_poker, max_attributes_poker, min_attributes_poker))
 
 
-
+'''
 #medida de selectividad
     #calculo de los atributos más relevantes de cada columna para datos adult
     #para determinar el orden se han ordenado las columnas de más a menos usando como referencia el atributo que más aparece en cada columna
@@ -440,6 +440,7 @@ attribute_training_modificado_adult = training_attributes.copy()
 filas_adult, columnas_adult = attribute_training_modificado_adult.shape
 
     #este for sirve para calcular cuantas veces aparece el atributo que más aparece en cada columna la lista de nuevo orden se ha formado de forma manual utilizando estos datos
+
 '''
 for j in range(columnas_adult):
 
@@ -487,7 +488,7 @@ for j in range(columnas_poker):
     print(valor_top_1)
 '''
 nuevo_orden_poker = [0, 4, 8, 6, 2, 7, 9, 3, 5, 1]
-
+'''
     #medida de selectividad para datos adult y random forest
 print("medida de selectividad para 256 muestras de adults: ")
 print("medida usando random forest:")
@@ -496,7 +497,7 @@ print(selectividad(muestras_de_medida_adult, objetivos_adult, randomForestModel,
     #medida de selectividad para datos adult y xgboost
 print("medida usando xgboost:")
 print(selectividad(muestras_de_medida_adult, objetivos_adult, xgboostModel_adult, nuevo_orden_adult))
-
+'''
     #medida de selectividad para datos poker y xgboost
 #print("medida de selectividad para 256 muestras de poker: ")
 #print("medida usando xgboost: ")
@@ -577,6 +578,7 @@ muestras_adult = muestras_de_medida_adult
 test_adult = objetivos_adult
 muestras_poker = muestras_de_medida_poker
 test_poker = objetivos_poker
+'''
     #Medida de completitud para datos adult y randomforest
 print("medidas de completitud para 256 muestras de datos adult: ")
 lista_G = []
@@ -607,7 +609,7 @@ for x in muestras_poker:
 print("para xgboost:")
 print(completitud(muestras_poker, lista_G, xgboostModel_poker, test_poker, 'multiclass'))
 
-
+'''
 #medida de congruencia
 
     #medida de congruencia para adult y xgboost
