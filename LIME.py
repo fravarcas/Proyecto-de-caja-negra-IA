@@ -441,7 +441,7 @@ filas_adult, columnas_adult = attribute_training_modificado_adult.shape
 
     #este for sirve para calcular cuantas veces aparece el atributo que más aparece en cada columna la lista de nuevo orden se ha formado de forma manual utilizando estos datos
 
-
+'''
 for j in range(columnas_adult):
 
     d = {}
@@ -459,7 +459,7 @@ for j in range(columnas_adult):
     valor_top_1 = sorted(list(d.values()), reverse=True)[:1]
 
     print(valor_top_1)
-
+'''
 
 nuevo_orden_adult = [11, 10, 13, 8, 1, 9, 12, 5, 7, 3, 4, 6, 0, 2]
 
